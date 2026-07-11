@@ -34,8 +34,8 @@ import '@fontsource/jetbrains-mono/500.css'
 import '@fontsource/jetbrains-mono/600.css'
 import '@fontsource/jetbrains-mono/700.css'
 
-/** Все CTA «Войти» ведут в само приложение */
-const APP_LINK = 'https://dnd-crime.gistrec.cloud'
+/** Все CTA «Войти» ведут в само приложение (лендинг и SPA живут на одном домене) */
+const APP_LINK = '/login'
 
 export default function LandingPage() {
   const appLink = APP_LINK

@@ -1,0 +1,42 @@
+# Превью лендинга на staging: https://dnd-crime-staging.gistrec.cloud/
+# STAGING_DEPLOY_KEY ограничен на VM через rrsync (джейл ~/DndCrimeLandingStaging,
+# -wo, restrict), поэтому rsync пишет в dist/ — путь анкорится в корень джейла,
+# наружу (в т.ч. в ~) выхода нет, --delete затрагивает только ~/DndCrimeLandingStaging/dist.
+name: staging-deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+# Один staging — параллельные деплои из разных PR бессмысленны,
+# при новом пуше недокативший старый деплой отменяется
+concurrency:
+  group: landing-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn build
+
+      - name: Настроить SSH
+        env:
+          SSH_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo 'germany.vps.gistrec.cloud ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJIy14M39XFKTzrbhuOaMw1Hragd2sXlrKN3VjMOwg4h' > ~/.ssh/known_hosts
+
+      - name: Залить dist на staging
+        run: rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
