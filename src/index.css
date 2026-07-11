@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/* фон под лендингом до маунта React — чтобы не мигало белым */
+body {
+  margin: 0;
+  background: #14110d;
+}
