@@ -1,6 +1,7 @@
 # Превью лендинга на staging: https://dnd-crime-staging.gistrec.cloud/
-# Деплой-ключ ограничен на VM через rrsync записью только в
-# /home/gistrec/DndCrimeLandingStaging/dist — поэтому destination в rsync это «/».
+# STAGING_DEPLOY_KEY ограничен на VM через rrsync (джейл ~/DndCrimeLandingStaging,
+# -wo, restrict), поэтому rsync пишет в dist/ — путь анкорится в корень джейла,
+# наружу (в т.ч. в ~) выхода нет, --delete затрагивает только ~/DndCrimeLandingStaging/dist.
 name: staging-deploy
 
 on:
@@ -38,4 +39,4 @@ jobs:
           echo 'germany.vps.gistrec.cloud ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJIy14M39XFKTzrbhuOaMw1Hragd2sXlrKN3VjMOwg4h' > ~/.ssh/known_hosts
 
       - name: Залить dist на staging
-        run: rsync -az --delete -e "ssh -i ~/.ssh/deploy_key" dist/ gistrec@germany.vps.gistrec.cloud:/
+        run: rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
