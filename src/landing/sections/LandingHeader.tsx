@@ -16,7 +16,7 @@ export function LandingHeader({ appLink }: { appLink: string }) {
             Артефакт
           </a>
         </div>
-        <a href={appLink} target="_blank" rel="noopener" className="lp-cta">
+        <a href={appLink} className="lp-cta">
           Войти
         </a>
       </nav>

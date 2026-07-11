@@ -70,7 +70,7 @@ export function ArtifactSection({ sectionRef, skullCanvasRef, appLink }: Artifac
             Вход через Google, без пароля. Комната партии, календарь и листы персонажей будут готовы
             за минуту.
           </p>
-          <a href={appLink} target="_blank" rel="noopener" className="lp-cta lp-cta-lg">
+          <a href={appLink} className="lp-cta lp-cta-lg">
             Войти
           </a>
           <span className="lp-mono text-[12px] font-medium tracking-[0.04em] text-(--lp-muted)">

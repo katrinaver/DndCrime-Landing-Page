@@ -17,11 +17,9 @@ export function LandingFooter({ appLink }: { appLink: string }) {
         </div>
         <a
           href={appLink}
-          target="_blank"
-          rel="noopener"
           className="lp-mono text-[13px] font-medium text-(--lp-gold) hover:text-(--lp-gold-2)"
         >
-          dnd-crime.gistrec.cloud →
+          Войти в приложение →
         </a>
         <span className="lp-mono text-[11px] font-medium tracking-[0.06em] text-(--lp-faint)">
           ДЕЛО № DC-2026 · между сессиями
