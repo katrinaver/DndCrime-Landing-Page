@@ -76,3 +76,108 @@ jobs:
                 body,
               });
             }
+
+  visual-diff:
+    name: Visual diff vs production
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Resolve Playwright version
+        id: playwright
+        run: |
+          VERSION=$(node -p "require('playwright-core/package.json').version")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Chromium and system dependencies
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: npx playwright@${{ steps.playwright.outputs.version }} install chromium --with-deps
+
+      - name: Ensure Chromium is installed
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: npx playwright@${{ steps.playwright.outputs.version }} install chromium
+
+      - name: Capture production and staging
+        run: |
+          node scripts/visual-diff.mjs \
+            --baseline https://dnd-crime.gistrec.cloud/ \
+            --current https://dnd-crime-staging.gistrec.cloud/ \
+            --out /tmp/visual-diff
+
+      - name: Upload visual diff to Object Storage
+        id: upload
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ru-central1
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${HEAD_SHA:0:7}"
+          PREFIX="visual-diffs/pr-${PR_NUMBER}/${SHORT_SHA}"
+          aws s3 sync /tmp/visual-diff/ "s3://dnd-crime/${PREFIX}/" \
+            --endpoint-url https://storage.yandexcloud.net \
+            --no-progress --only-show-errors
+          echo "prefix=${PREFIX}" >> "$GITHUB_OUTPUT"
+
+      - name: Update visual diff comment
+        uses: actions/github-script@v7
+        env:
+          PREFIX: ${{ steps.upload.outputs.prefix }}
+          REPORT: /tmp/visual-diff/report.txt
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- landing-visual-diff -->';
+            const base = `https://storage.yandexcloud.net/dnd-crime/${process.env.PREFIX}`;
+            const values = Object.fromEntries(
+              fs.readFileSync(process.env.REPORT, 'utf8').trim().split('\n')
+                .map(line => line.split(/\s+/))
+            );
+            const body = [
+              marker,
+              '🎨 **Visual diff: production → this PR**',
+              '',
+              '| Viewport | Changed | Before / after | Red diff |',
+              '| --- | ---: | --- | --- |',
+              `| Desktop | ${values.desktop}% | [🎚 slider](${base}/desktop.html) | [🔴 diff](${base}/desktop--diff.png) |`,
+              `| Mobile | ${values.mobile}% | [🎚 slider](${base}/mobile.html) | [🔴 diff](${base}/mobile--diff.png) |`,
+              '',
+              `<details><summary>Desktop red-pixel diff</summary><br><img src="${base}/desktop--diff.png" width="1000"></details>`,
+              '',
+              `<details><summary>Mobile red-pixel diff</summary><br><img src="${base}/mobile--diff.png" width="390"></details>`,
+            ].join('\n');
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number, per_page: 100,
+            });
+            const previous = comments.find(comment => comment.body?.includes(marker));
+            if (previous) {
+              await github.rest.issues.updateComment({
+                ...context.repo, comment_id: previous.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number, body,
+              });
+            }
