@@ -8,6 +8,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 # Один staging — параллельные деплои из разных PR бессмысленны. Активный deploy
 # не отменяем: прерванный rsync может оставить dist частично обновлённым.
 concurrency:
@@ -42,3 +46,33 @@ jobs:
         # Новые файлы сначала полностью передаются во временные пути; устаревшие
         # удаляются только после применения обновлений.
         run: rsync -az --delay-updates --delete-delay -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
+
+      - name: Добавить ссылку на staging в PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- landing-staging-deploy -->';
+            const body = `${marker}\n✅ Лендинг залит на staging: https://dnd-crime-staging.gistrec.cloud/`;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number,
+              per_page: 100,
+            });
+            const previous = comments.find(comment =>
+              comment.user.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number,
+                body,
+              });
+            }

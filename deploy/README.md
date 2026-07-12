@@ -8,6 +8,10 @@
 | `dnd-crime-staging.gistrec.cloud` | PR в `main` (`staging-deploy.yml`) | `~/DndCrimeLandingStaging/dist` | `STAGING_DEPLOY_KEY` |
 | `dnd-crime.gistrec.cloud` | push/merge в `main` (`prod-deploy.yml`) | `~/DndCrimeLanding/dist` | `PROD_DEPLOY_KEY` |
 
+После успешного staging-деплоя workflow создаёт или обновляет комментарий со ссылкой
+в PR. После merge и успешного production-деплоя отдельный комментарий со ссылкой на
+production добавляется в тот же PR. Для этого workflow используют `pull-requests: write`.
+
 Сборка: `base` = `/l/` (см. `vite.config.ts`), поэтому ассеты лендинга отдаются по `/l/…`
 и не конфликтуют с `/assets/…` приложения. CTA «Войти» ведут на относительный `/login`.
 
