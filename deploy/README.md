@@ -12,6 +12,23 @@
 в PR. После merge и успешного production-деплоя отдельный комментарий со ссылкой на
 production добавляется в тот же PR. Для этого workflow используют `pull-requests: write`.
 
+## Visual diff в PR
+
+После staging-деплоя Playwright снимает production и staging в desktop/mobile,
+строит красный pixel diff и HTML-сравнение с ползунком, загружает результаты в
+Yandex Object Storage и обновляет sticky-комментарий в PR.
+
+GitHub Actions secrets:
+
+- `YC_S3_ACCESS_KEY_ID`;
+- `YC_S3_SECRET_ACCESS_KEY`.
+
+Результаты хранятся в bucket `dnd-crime` под
+`visual-diffs/pr-<number>/<sha7>/`. Для этого префикса нужен публичный read,
+а lifecycle rule должна удалять старые результаты, например через 30 дней.
+Динамические canvas скрываются при съёмке, чтобы случайные частицы не создавали
+ложный diff; HTML/CSS-вёрстка и занимаемое canvas место сохраняются.
+
 Сборка: `base` = `/l/` (см. `vite.config.ts`), поэтому ассеты лендинга отдаются по `/l/…`
 и не конфликтуют с `/assets/…` приложения. CTA «Войти» ведут на относительный `/login`.
 
