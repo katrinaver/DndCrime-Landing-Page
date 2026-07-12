@@ -8,11 +8,11 @@ on:
   pull_request:
     branches: [main]
 
-# Один staging — параллельные деплои из разных PR бессмысленны,
-# при новом пуше недокативший старый деплой отменяется
+# Один staging — параллельные деплои из разных PR бессмысленны. Активный deploy
+# не отменяем: прерванный rsync может оставить dist частично обновлённым.
 concurrency:
   group: landing-staging
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -39,4 +39,6 @@ jobs:
           echo 'germany.vps.gistrec.cloud ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJIy14M39XFKTzrbhuOaMw1Hragd2sXlrKN3VjMOwg4h' > ~/.ssh/known_hosts
 
       - name: Залить dist на staging
-        run: rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
+        # Новые файлы сначала полностью передаются во временные пути; устаревшие
+        # удаляются только после применения обновлений.
+        run: rsync -az --delay-updates --delete-delay -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/

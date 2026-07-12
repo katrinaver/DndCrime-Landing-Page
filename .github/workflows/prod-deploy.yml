@@ -11,7 +11,8 @@ on:
 
 concurrency:
   group: landing-prod
-  cancel-in-progress: true
+  # Не прерываем rsync посреди обновления активного dist.
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -38,4 +39,6 @@ jobs:
           echo 'germany.vps.gistrec.cloud ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJIy14M39XFKTzrbhuOaMw1Hragd2sXlrKN3VjMOwg4h' > ~/.ssh/known_hosts
 
       - name: Залить dist на prod
-        run: rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
+        # Новые файлы сначала полностью передаются во временные пути; устаревшие
+        # удаляются только после применения обновлений.
+        run: rsync -az --delay-updates --delete-delay -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
