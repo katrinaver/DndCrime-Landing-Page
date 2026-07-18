@@ -40,12 +40,15 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          echo 'germany.vps.gistrec.cloud ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJIy14M39XFKTzrbhuOaMw1Hragd2sXlrKN3VjMOwg4h' > ~/.ssh/known_hosts
+          # Деплой-хост — стабильный алиас deploy.dnd-crime.gistrec.cloud в нашем
+          # DNS: первый ключ принимается автоматически (раннер одноразовый),
+          # переезд VPS за алиасом не требует правок CI.
+          printf 'Host %s\n  StrictHostKeyChecking accept-new\n' '${{ vars.DEPLOY_HOST }}' > ~/.ssh/config
 
       - name: Залить dist на prod
         # Новые файлы сначала полностью передаются во временные пути; устаревшие
         # удаляются только после применения обновлений.
-        run: rsync -az --delay-updates --delete-delay -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@germany.vps.gistrec.cloud:dist/
+        run: rsync -az --delay-updates --delete-delay -e "ssh -i ~/.ssh/deploy_key -o ControlPath=none" dist/ gistrec@${{ vars.DEPLOY_HOST }}:dist/
 
       - name: Добавить ссылку на prod в смерженный PR
         uses: actions/github-script@v7
